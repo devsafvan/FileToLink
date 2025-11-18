@@ -42,16 +42,18 @@ async def stream_start(client, message):
         chat_id=LOG_CHANNEL,
         file_id=fileid,
     )
-    fileName = {quote_plus(get_name(log_msg))}
+    # Replace spaces with dots in the filename before URL-encoding
+    edited_name = get_name(log_msg).replace(" ", ".")
+    fileName = quote_plus(edited_name)
     if SHORTLINK == False:
-        stream = f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
-        download = f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
+        stream = f"{URL}watch/{str(log_msg.id)}/{fileName}?hash={get_hash(log_msg)}"
+        download = f"{URL}{str(log_msg.id)}/{fileName}?hash={get_hash(log_msg)}"
     else:
-        stream = await get_shortlink(f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}")
-        download = await get_shortlink(f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}")
+        stream = await get_shortlink(f"{URL}watch/{str(log_msg.id)}/{fileName}?hash={get_hash(log_msg)}")
+        download = await get_shortlink(f"{URL}{str(log_msg.id)}/{fileName}?hash={get_hash(log_msg)}")
         
     await log_msg.reply_text(
-        text=f"•• Lɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• File Name : {fileName}",
+        text=f"•• Lɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• File Name : {edited_name}",
         quote=True,
         disable_web_page_preview=True,
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 Fast Download 🚀", url=download),  # we download Link
@@ -67,4 +69,4 @@ async def stream_start(client, message):
     )
     msg_text = """<i><u>𝗬𝗼𝘂𝗿 𝗟𝗶𝗻𝗸 𝗚𝗲𝗻𝗲𝗿𝗮𝘁𝗲𝗱 !</u></i>\n\n<b>📂 Fɪʟᴇ ɴᴀᴍᴇ :</b> <i>{}</i>\n\n<b>📦 Fɪʟᴇ ꜱɪᴢᴇ :</b> <i>{}</i>\n\n<b>🚸 Nᴏᴛᴇ : ʟɪɴᴋ ᴡᴏɴ'ᴛ ᴇxᴘɪʀᴇ ᴛɪʟʟ ɪ ᴅᴇʟᴇᴛᴇ</b>"""
 
-    await message.reply_text(text=msg_text.format(get_name(log_msg), humanbytes(get_media_file_size(message))), quote=True, disable_web_page_preview=True, reply_markup=rm)
+    await message.reply_text(text=msg_text.format(edited_name, humanbytes(get_media_file_size(message))), quote=True, disable_web_page_preview=True, reply_markup=rm)
