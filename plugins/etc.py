@@ -47,13 +47,6 @@ async def send_two_videos(client, message):
     # First video
     await client.send_video(
         chat_id=message.chat.id,
-        video="plugins/test/vid1.mp4",
-        caption="🎥 Video 1"
-    )
-
-    # Second video
-    await client.send_video(
-        chat_id=message.chat.id,
-        video="plugins/test/vid2.mp4",
-        caption="🎥 Video 2"
+        video="plugins/testvideo/vid1.mp4",
+        caption="Look this !!!"
     )
