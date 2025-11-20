@@ -13,7 +13,7 @@ routes = web.RouteTableDef()
 
 @routes.get("/", allow_head=True)
 async def root_route_handler(request):
-    return web.json_response("File2Link !")
+    return web.json_response("BenFilterBot")
 
 @routes.get(r"/watch/{path:\S+}", allow_head=True)
 async def stream_handler(request: web.Request):
@@ -87,21 +87,10 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
     
     file_size = file_id.file_size
 
-    # Improved range parsing: Use aiohttp's built-in request.http_range for reliability, with fallback to manual parsing
     if range_header:
-        try:
-            # Manual parsing with error handling for edge cases (e.g., "bytes=-1023")
-            range_str = range_header.replace("bytes=", "")
-            parts = range_str.split("-")
-            from_bytes_str = parts[0].strip()
-            until_bytes_str = parts[1].strip() if len(parts) > 1 else ""
-            
-            from_bytes = int(from_bytes_str) if from_bytes_str else 0  # Default to 0 if empty (e.g., "bytes=-1023" means from end)
-            until_bytes = int(until_bytes_str) if until_bytes_str else file_size - 1
-        except (ValueError, IndexError):
-            # Fallback to aiohttp's parsing if manual fails
-            from_bytes = request.http_range.start or 0
-            until_bytes = (request.http_range.stop or file_size) - 1
+        from_bytes, until_bytes = range_header.replace("bytes=", "").split("-")
+        from_bytes = int(from_bytes)
+        until_bytes = int(until_bytes) if until_bytes else file_size - 1
     else:
         from_bytes = request.http_range.start or 0
         until_bytes = (request.http_range.stop or file_size) - 1
@@ -128,10 +117,6 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
 
     mime_type = file_id.mime_type
     file_name = file_id.file_name
-    # URL-decode and replace spaces with dots in file_name if it exists
-    if file_name:
-        file_name = urllib.parse.unquote(file_name)
-        file_name = file_name.replace(" ", ".")
     disposition = "attachment"
 
     if mime_type:
@@ -142,9 +127,7 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
                 file_name = f"{secrets.token_hex(2)}.unknown"
     else:
         if file_name:
-            # Fix: mimetypes.guess_type returns (type, encoding) tuple; unpack to get string
-            guessed_mime, _ = mimetypes.guess_type(file_id.file_name)
-            mime_type = guessed_mime or "application/octet-stream"  # Default if guess fails
+            mime_type = mimetypes.guess_type(file_id.file_name)
         else:
             mime_type = "application/octet-stream"
             file_name = f"{secrets.token_hex(2)}.unknown"
@@ -153,7 +136,7 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
         status=206 if range_header else 200,
         body=body,
         headers={
-            "Content-Type": f"{mime_type}",  # Now guaranteed to be a string
+            "Content-Type": f"{mime_type}",
             "Content-Range": f"bytes {from_bytes}-{until_bytes}/{file_size}",
             "Content-Length": str(req_length),
             "Content-Disposition": f'{disposition}; filename="{file_name}"',
