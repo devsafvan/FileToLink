@@ -48,19 +48,25 @@ def print_banner():
 # ================= AUTO RESTART =================
 async def auto_restart():
     await asyncio.sleep(RESTART_INTERVAL)
+
     try:
         tz = pytz.timezone("Asia/Kolkata")
         now = datetime.now(tz).strftime("%d-%m-%Y | %I:%M:%S %p")
+
         await File2Link.send_message(
             chat_id=LOG_CHANNEL,
-            text=f"♻️ **Auto Restart Triggered**\n\n⏰ Time: `{now}`\n🕕 Interval: `12 Hours`"
+            text=(
+                "♻️ <b>Auto Restart Triggered</b>\n\n"
+                f"⏰ Time: <code>{now}</code>\n"
+                "🕕 Interval: <code>3 Hours</code>"
+            )
         )
     except Exception as e:
         logging.error(f"Restart message failed: {e}")
+    logging.info("Restarting bot after 3 hours")
 
-    logging.info("Restarting bot after 12 hours")
-    sys.exit(0)
-
+    # Restart bot using python3 bot.py
+    os.execv(sys.executable, ["python3", "bot.py"])
 # ================= MAIN =================
 async def start():
     print("\n")
@@ -120,5 +126,6 @@ if __name__ == "__main__":
         loop.run_until_complete(start())
     except KeyboardInterrupt:
         logging.info("Service Stopped Bye 👋")
+
 
 
