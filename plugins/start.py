@@ -1,7 +1,8 @@
-import random,re
+import random, re
 import humanize
 from Script import script
 from pyrogram import Client, filters, enums
+from pyrogram.errors import UserNotParticipant # Required for the check
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ForceReply, CallbackQuery
 from info import URL, LOG_CHANNEL, SHORTLINK
 from urllib.parse import quote_plus
@@ -9,6 +10,34 @@ from lib.util.file_properties import get_name, get_hash, get_media_file_size
 from lib.util.human_readable import humanbytes
 from database.users_chats_db import db
 from utils import temp, get_shortlink
+
+# --- CONFIGURATION ---
+FORCE_SUB_CHANNEL_ID = -1002581367215  # Replace with your Channel ID
+FORCE_SUB_LINK = "https://t.me/+DBG5puvRFy9lNDY9" # Replace with your Link
+
+# --- GLOBAL FORCE SUB CHECK (Runs Before Everything) ---
+@Client.on_message(filters.private, group=-1)
+async def force_sub_check(client, message):
+    try:
+        # Check if user is a member
+        await client.get_chat_member(FORCE_SUB_CHANNEL_ID, message.from_user.id)
+    except UserNotParticipant:
+        # If not a member, send the warning and STOP processing
+        await message.reply_text(
+            text="<b>📢 Ultras Developer: 🔒 Join this channel to use the bot.</b>",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Join Channel", url=FORCE_SUB_LINK)]
+            ]),
+            parse_mode=enums.ParseMode.HTML
+        )
+        await message.stop_propagation() # <--- THIS STOPS THE USER HERE
+    except Exception as e:
+        # If bot is not admin or other error, print it but allow access
+        print(f"Force Sub Error: {e}")
+        # We do NOT stop propagation here, so the bot works if the check fails due to error
+
+# --- NORMAL BOT COMMANDS ---
+# (Notice we don't need the check inside these functions anymore)
 
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
@@ -43,16 +72,11 @@ async def stream_start(client, message):
             chat_id=LOG_CHANNEL,
             file_id=fileid,
         )
-        # Get and sanitize the filename: remove special characters, replace spaces with dots
-        edited_name = get_name(log_msg)
-        edited_name = re.sub(r'[^\w\.-]', '', edited_name)  # Remove non-alphanumeric, dot, hyphen (strips @, :, spaces, etc.)
-        edited_name = edited_name.replace(" ", ".")  # Replace any remaining spaces with dots
-        fileName = quote_plus(edited_name)
         
-        # Debug: Print for troubleshooting (remove in production)
-        print(f"Original filename: {filename}")
-        print(f"Edited name: {edited_name}")
-        print(f"Encoded fileName: {fileName}")
+        edited_name = get_name(log_msg)
+        edited_name = re.sub(r'[^\w\.-]', '', edited_name) 
+        edited_name = edited_name.replace(" ", ".") 
+        fileName = quote_plus(edited_name)
         
         if SHORTLINK == False:
             stream = f"{URL}watch/{str(log_msg.id)}/{fileName}?hash={get_hash(log_msg)}"
@@ -65,8 +89,8 @@ async def stream_start(client, message):
             text=f"•• Lɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• File Name : {edited_name}",
             quote=True,
             disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 Fast Download 🚀", url=download),  # we download Link
-                                                InlineKeyboardButton('🖥️ Watch online 🖥️', url=stream)]])  # web stream Link
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 Fast Download 🚀", url=download), 
+                                                InlineKeyboardButton('🖥️ Watch online 🖥️', url=stream)]]) 
         )
         rm=InlineKeyboardMarkup(
             [
@@ -83,12 +107,11 @@ async def stream_start(client, message):
 <b>🚸 Nᴏᴛᴇ : ʟɪɴᴋ ᴡᴏɴ'ᴛ ᴇxᴘɪʀᴇ ᴛɪʟʟ ɪ ᴅᴇʟᴇᴛᴇ</b>"""
 
         await message.reply_text(
-        text=msg_text,
-        quote=True,
-        disable_web_page_preview=True,
-        reply_markup=rm
+            text=msg_text,
+            quote=True,
+            disable_web_page_preview=True,
+            reply_markup=rm
         )
     except Exception as e:
-        # Error handling: Reply to user and log
         await message.reply_text(f"Sorry, an error occurred while generating the link: {str(e)}")
-        print(f"Error in stream_start: {e}")  # Replace with logging in production
+        print(f"Error in stream_start: {e}")
